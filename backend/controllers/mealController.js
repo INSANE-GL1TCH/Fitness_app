@@ -1,8 +1,8 @@
-
 const Meal = require("../models/mealModels");
 
 const addMeal = async (req, res) => {
   const { type, protein, carbs, fats } = req.body;
+  const userId = req.user.id; // Grab the logged-in user's ID
 
   // Validation
   if (!type) {
@@ -12,7 +12,6 @@ const addMeal = async (req, res) => {
   }
 
   try {
-    // Calculate total calories (rough estimate: protein=4cal/g, carbs=4cal/g, fats=9cal/g)
     const calories = (protein || 0) * 4 + (carbs || 0) * 4 + (fats || 0) * 9;
 
     const meal = await Meal.create({
@@ -20,6 +19,8 @@ const addMeal = async (req, res) => {
       protein: protein || 0,
       carbs: carbs || 0,
       fats: fats || 0,
+      calories: calories, // 👇 FIXED: Actually save the calories to the database!
+      userId: userId, // 👇 NEW: Save this Meal explicitly to the logged-in user!
     });
 
     return res.status(201).json({
@@ -36,7 +37,10 @@ const addMeal = async (req, res) => {
 
 const getMeals = async (req, res) => {
   try {
+    const userId = req.user.id; 
+
     const meals = await Meal.findAll({
+      where: { userId: userId }, // 👇 NEW: Only fetch rows belonging to THIS user!
       order: [["createdAt", "DESC"]],
     });
 
@@ -53,13 +57,15 @@ const getMeals = async (req, res) => {
 
 const deleteMeal = async (req, res) => {
   const { id } = req.params;
+  const userId = req.user.id;
 
   try {
-    const meal = await Meal.findOne({ where: { id } });
+    // 👇 NEW: Ensure they can only delete it if they own it!
+    const meal = await Meal.findOne({ where: { id, userId } });
 
     if (!meal) {
       return res.status(404).json({
-        message: "Meal not found",
+        message: "Meal not found or unauthorized",
       });
     }
 
