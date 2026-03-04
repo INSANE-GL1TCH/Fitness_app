@@ -54,13 +54,16 @@ const Login = () => {
       if (response?.data?.success) {
         toast.success(response?.data?.message || 'Login successful!');
         
+        // Grab the user data containing the role
+        const userData = response?.data?.user;
+        
         // Store token and user data
         if (formData.rememberMe) {
           localStorage.setItem('token', response?.data?.token);
-          localStorage.setItem('user', JSON.stringify(response?.data?.user));
+          localStorage.setItem('user', JSON.stringify(userData));
         } else {
           sessionStorage.setItem('token', response?.data?.token);
-          sessionStorage.setItem('user', JSON.stringify(response?.data?.user));
+          sessionStorage.setItem('user', JSON.stringify(userData));
         }
 
         setFormData({
@@ -69,8 +72,15 @@ const Login = () => {
           rememberMe: false,
         });
 
-        // Navigate to dashboard
-        setTimeout(() => navigate('/dashboard'), 1000);
+        // 👇 NEW: The Traffic Cop logic! Direct users based on their role
+        setTimeout(() => {
+          if (userData?.role === 'trainer') {
+            navigate('/trainerdash'); // Send trainers to their special dashboard
+          } else {
+            navigate('/dashboard'); // Send regular users to the standard dashboard
+          }
+        }, 1000);
+
       } else {
         toast.error(response?.data?.message || 'Login failed');
       }
@@ -81,7 +91,6 @@ const Login = () => {
 
   const handleForgotPassword = () => {
     navigate('/forgot-password');
-    // Or you can show a modal/prompt for password reset
   };
 
   return (
@@ -164,7 +173,7 @@ const Login = () => {
             <p className="text-center text-sm text-gray-600">
               Don't have an account?{' '}
               <span 
-                onClick={() => navigate('/register')}
+                onClick={() => navigate('/')}
                 className="text-orange-600 hover:text-orange-700 font-medium cursor-pointer"
               >
                 Sign Up
