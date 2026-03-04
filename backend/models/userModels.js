@@ -1,7 +1,7 @@
 const {DataTypes} = require ("sequelize");
 const {sequelize} = require ("../database/database");
 
-const Register=sequelize.define(
+const Register = sequelize.define(
     "Users",
     {
         id:{    
@@ -12,7 +12,6 @@ const Register=sequelize.define(
         username:{
             type:DataTypes.STRING,
             unique:true
-
         },
         email:{
             type:DataTypes.STRING,
@@ -21,7 +20,15 @@ const Register=sequelize.define(
         password:{
             type:DataTypes.STRING,
             allowNull:false
-
+        },
+        
+        role: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            defaultValue: 'user', 
+            validate: {
+                isIn: [['user', 'trainer']] 
+            }
         },
         isVerified:{
             type :DataTypes.BOOLEAN,
@@ -31,9 +38,17 @@ const Register=sequelize.define(
             type:DataTypes.STRING,
             allowNull:true
         },
-        verificationTokenExpries:{
+        verificationTokenExpires: {
             type: DataTypes.DATE,
-            allowNull:true
+            allowNull: true
+        },
+        resetPasswordToken: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        resetPasswordExpires: {
+            type: DataTypes.DATE,
+            allowNull: true
         }
     },
     {
@@ -42,4 +57,4 @@ const Register=sequelize.define(
     }
 );
 
-module.exports=Register;
+module.exports = Register;
