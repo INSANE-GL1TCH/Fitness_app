@@ -1,500 +1,361 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Flame, Target, TrendingUp, Scale, Utensils, Dumbbell, Heart, Calendar, Award, ChevronRight, PlusCircle } from 'lucide-react';
+import { addBMI, getBMI, deleteBMI, addMeal, getMeals, deleteMeal, getMyBadgesFromDB } from '../services/api';
+import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import { Activity, Flame, Scale, Dumbbell, Trash2, Plus, Clock, Target, Award, Star, Trophy } from 'lucide-react';
 
-export default function Dashboard() {
-  const [bmiData, setBmiData] = useState({ weight: 70, height: 170 });
+// --- Helpers ---
+const calculateCalories = (p, c, f) => (p * 4) + (c * 4) + (f * 9);
+
+const getBMICategory = (bmi) => {
+  const b = parseFloat(bmi);
+  if (b < 18.5) return 'Underweight';
+  if (b >= 18.5 && b < 25) return 'Normal';
+  if (b >= 25 && b < 30) return 'Overweight';
+  return 'Obese';
+};
+
+const getExerciseRecommendations = (category) => {
+  const plans = {
+    'Underweight': [
+      { name: 'Strength Training', time: '45-60 min', diff: 'Moderate', desc: 'Compound exercises (squats, deadlifts) to build muscle mass.' },
+      { name: 'Resistance Bands', time: '30-40 min', diff: 'Easy', desc: 'Progressive resistance training for gradual strength.' }
+    ],
+    'Normal': [
+      { name: 'Cardio & Strength', time: '45 min', diff: 'Moderate', desc: 'Balanced 20 min cardio with 25 min strength training.' },
+      { name: 'HIIT / Running', time: '30-40 min', diff: 'Hard', desc: 'Maintain cardiovascular health and stamina.' }
+    ],
+    'Overweight': [
+      { name: 'Low-Impact HIIT', time: '25-30 min', diff: 'Hard', desc: 'High intervals to maximize calorie burn without joint stress.' },
+      { name: 'Cycling / Swimming', time: '45 min', diff: 'Moderate', desc: 'Full-body workout with minimal joint stress.' }
+    ],
+    'Obese': [
+      { name: 'Brisk Walking', time: '30-45 min', diff: 'Easy', desc: 'Low-impact activity perfect for starting safely.' },
+      { name: 'Water Aerobics', time: '30-40 min', diff: 'Easy', desc: 'Joint-friendly exercise providing resistance without impact.' }
+    ]
+  };
+  return plans[category] || plans['Normal'];
+};
+
+const Dashboard = () => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  
+  // BMI, Meal, and Badge States
+  const [bmiRecords, setBmiRecords] = useState([]);
+  const [latestBMI, setLatestBMI] = useState(null);
+  const [bmiForm, setBmiForm] = useState({ height: '', weight: '' });
+  
   const [meals, setMeals] = useState([]);
-  const [showBmiCalc, setShowBmiCalc] = useState(false);
-  const [showPortionControl, setShowPortionControl] = useState(false);
-  const [animateIn, setAnimateIn] = useState(false);
+  const [mealForm, setMealForm] = useState({ type: '', protein: '', carbs: '', fats: '' });
+  const [totalCalories, setTotalCalories] = useState(0);
+  const CALORIE_GOAL = 2000;
+
+  const [exercises, setExercises] = useState([]);
+  const [badges, setBadges] = useState([]);
+  const [loadingBadges, setLoadingBadges] = useState(true);
 
   useEffect(() => {
-    setAnimateIn(true);
-  }, []);
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const userData = localStorage.getItem('user') || sessionStorage.getItem('user');
+    
+    if (!token) {
+      toast.error('Please login first');
+      navigate('/login');
+      return;
+    }
+    if (userData) setUser(JSON.parse(userData));
+    fetchAllData();
+    fetchBadges();
+  }, [navigate]);
 
-  const calculateBMI = () => {
-    const heightInMeters = bmiData.height / 100;
-    const bmi = (bmiData.weight / (heightInMeters * heightInMeters)).toFixed(1);
-    return bmi;
+  useEffect(() => {
+    if (latestBMI) setExercises(getExerciseRecommendations(getBMICategory(latestBMI.bmi)));
+  }, [latestBMI]);
+
+  useEffect(() => {
+    const total = meals.reduce((sum, m) => sum + calculateCalories(m.protein||0, m.carbs||0, m.fats||0), 0);
+    setTotalCalories(Math.round(total));
+  }, [meals]);
+
+  const fetchAllData = async () => {
+    try {
+      const [bmiRes, mealRes] = await Promise.all([getBMI(), getMeals()]);
+      const fetchedBmi = bmiRes.data.data || [];
+      setBmiRecords(fetchedBmi);
+      if (fetchedBmi.length > 0) setLatestBMI(fetchedBmi[0]);
+      setMeals(mealRes.data.data || []);
+      setLoading(false);
+    } catch (error) {
+      if (error.response?.status === 401) {
+        toast.error('Session expired');
+        navigate('/login');
+      }
+      setLoading(false);
+    }
   };
 
-  const getBMICategory = (bmi) => {
-    if (bmi < 18.5) return { text: 'Underweight', color: 'text-blue-400' };
-    if (bmi < 25) return { text: 'Normal', color: 'text-green-400' };
-    if (bmi < 30) return { text: 'Overweight', color: 'text-yellow-400' };
-    return { text: 'Obese', color: 'text-red-400' };
+  const fetchBadges = async () => {
+    try {
+      const response = await getMyBadgesFromDB();
+      if (response.data.success) {
+        setBadges(response.data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching badges:", error);
+    } finally {
+      setLoadingBadges(false);
+    }
   };
 
-  const addMeal = (mealType, protein, carbs, fats) => {
-    setMeals([...meals, { id: Date.now(), type: mealType, protein, carbs, fats, time: new Date().toLocaleTimeString() }]);
+  // --- CRUD Handlers ---
+  const handleBMISubmit = async (e) => {
+    e.preventDefault();
+    if (!bmiForm.height || !bmiForm.weight) return toast.error('Enter height and weight');
+    try {
+      await addBMI({ height: parseFloat(bmiForm.height), weight: parseFloat(bmiForm.weight) });
+      toast.success('BMI Logged!');
+      setBmiForm({ height: '', weight: '' });
+      fetchAllData();
+    } catch (err) { toast.error('Failed to add BMI'); }
   };
 
-  const totalMacros = meals.reduce((acc, meal) => ({
-    protein: acc.protein + meal.protein,
-    carbs: acc.carbs + meal.carbs,
-    fats: acc.fats + meal.fats
-  }), { protein: 0, carbs: 0, fats: 0 });
+  const handleDeleteBMI = async (id) => {
+    try {
+      await deleteBMI(id);
+      toast.success('Record deleted');
+      fetchAllData();
+    } catch (err) { toast.error('Failed to delete'); }
+  };
 
-  return (
-    <div className="min-h-screen bg-black text-white font-sans relative overflow-hidden">
-      {/* Animated Background Pattern */}
-      <div className="fixed inset-0 opacity-5">
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-transparent to-orange-600" 
-             style={{ 
-               backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,140,0,.1) 35px, rgba(255,140,0,.1) 70px)',
-               animation: 'slide 20s linear infinite'
-             }}>
-        </div>
-      </div>
+  const handleMealSubmit = async (e) => {
+    e.preventDefault();
+    if (!mealForm.type) return toast.error('Enter meal name');
+    try {
+      await addMeal({
+        type: mealForm.type,
+        protein: parseInt(mealForm.protein) || 0,
+        carbs: parseInt(mealForm.carbs) || 0,
+        fats: parseInt(mealForm.fats) || 0
+      });
+      toast.success('Meal Logged!');
+      setMealForm({ type: '', protein: '', carbs: '', fats: '' });
+      fetchAllData();
+    } catch (err) { toast.error('Failed to add meal'); }
+  };
 
-      {/* Noise Texture Overlay */}
-      <div className="fixed inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay"
-           style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 400 400\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }}>
-      </div>
+  const handleDeleteMeal = async (id) => {
+    try {
+      await deleteMeal(id);
+      toast.success('Meal deleted');
+      fetchAllData();
+    } catch (err) { toast.error('Failed to delete'); }
+  };
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600;700&display=swap');
-        
-        * {
-          font-family: 'Work Sans', sans-serif;
-        }
-        
-        .font-display {
-          font-family: 'Oswald', sans-serif;
-          letter-spacing: -0.02em;
-        }
-        
-        @keyframes slide {
-          0% { transform: translate(0, 0); }
-          100% { transform: translate(50px, 50px); }
-        }
-        
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        @keyframes pulse-glow {
-          0%, 100% { box-shadow: 0 0 20px rgba(255, 140, 0, 0.3); }
-          50% { box-shadow: 0 0 40px rgba(255, 140, 0, 0.6); }
-        }
-        
-        .animate-in {
-          animation: fadeInUp 0.8s ease-out forwards;
-        }
-        
-        .stagger-1 { animation-delay: 0.1s; }
-        .stagger-2 { animation-delay: 0.2s; }
-        .stagger-3 { animation-delay: 0.3s; }
-        .stagger-4 { animation-delay: 0.4s; }
-        
-        .glow-orange {
-          box-shadow: 0 4px 24px rgba(255, 140, 0, 0.4);
-        }
-        
-        .diagonal-cut {
-          clip-path: polygon(0 0, 100% 0, 100% 85%, 85% 100%, 0 100%);
-        }
-        
-        .hover-lift {
-          transition: all 0.3s ease;
-        }
-        
-        .hover-lift:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 10px 40px rgba(255, 140, 0, 0.3);
-        }
-      `}</style>
-
-      {/* Header */}
-      <header className="relative z-10 px-8 py-6 flex items-center justify-between border-b border-orange-500/20">
-        <div className={`flex items-center gap-3 ${animateIn ? 'animate-in' : 'opacity-0'}`}>
-          <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center rotate-6 hover:rotate-0 transition-transform">
-            <Flame className="w-7 h-7 text-black" />
-          </div>
-          <h1 className="text-3xl font-display font-bold tracking-tight">FIT<span className="text-orange-500">CLUB</span></h1>
-        </div>
-        
-        <nav className={`hidden md:flex items-center gap-8 ${animateIn ? 'animate-in stagger-1' : 'opacity-0'}`}>
-          <a href="#" className="text-sm font-medium hover:text-orange-500 transition">Dashboard</a>
-          <a href="#" className="text-sm font-medium hover:text-orange-500 transition">Workouts</a>
-          <a href="#" className="text-sm font-medium hover:text-orange-500 transition">Nutrition</a>
-          <a href="#" className="text-sm font-medium hover:text-orange-500 transition">Progress</a>
-        </nav>
-        
-        <button className={`bg-orange-500 hover:bg-orange-600 text-black font-semibold px-6 py-3 rounded-full transition flex items-center gap-2 ${animateIn ? 'animate-in stagger-2' : 'opacity-0'}`}>
-          <Award className="w-4 h-4" />
-          Premium
-        </button>
-      </header>
-
-      {/* Hero Section */}
-      <section className="relative z-10 px-8 py-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-8 items-center">
-            <div className={`${animateIn ? 'animate-in' : 'opacity-0'}`}>
-              <h2 className="text-7xl md:text-8xl font-display font-bold leading-none mb-4 italic">
-                NO<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">EXCUSES</span>
-              </h2>
-              <p className="text-xl text-gray-400 mb-8 max-w-md">
-                Transform your body, elevate your mind, and unleash the strength you never knew you had
-              </p>
-              <button className="bg-orange-500 hover:bg-orange-600 text-black font-bold px-8 py-4 rounded-full text-lg transition glow-orange flex items-center gap-3 group">
-                Start Training
-                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition" />
-              </button>
-              
-              <div className="flex gap-12 mt-12">
-                <div>
-                  <div className="text-4xl font-display font-bold">5.3K</div>
-                  <div className="text-sm text-gray-500">Active Users</div>
-                </div>
-                <div>
-                  <div className="text-4xl font-display font-bold">260K</div>
-                  <div className="text-sm text-gray-500">Workouts Logged</div>
-                </div>
-                <div>
-                  <div className="text-4xl font-display font-bold">80+</div>
-                  <div className="text-sm text-gray-500">Exercise Types</div>
-                </div>
-              </div>
-            </div>
-            
-            <div className={`relative ${animateIn ? 'animate-in stagger-2' : 'opacity-0'}`}>
-              <div className="diagonal-cut bg-gradient-to-br from-zinc-900 to-zinc-950 p-8 border border-orange-500/30">
-                <div className="text-right">
-                  <div className="text-8xl font-display font-bold text-orange-500 leading-none italic">JUST</div>
-                  <div className="text-8xl font-display font-bold text-orange-500 leading-none italic">RESULTS</div>
-                </div>
-                <div className="mt-8 flex justify-end">
-                  <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center rotate-12 hover:rotate-0 transition-transform cursor-pointer">
-                    <TrendingUp className="w-8 h-8 text-black" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Overview */}
-      <section className="relative z-10 px-8 py-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-6">
-            {[
-              { icon: Flame, label: 'Calories Burned', value: '2,847', unit: 'kcal', color: 'from-orange-500 to-red-500' },
-              { icon: Dumbbell, label: 'Workouts', value: '24', unit: 'this month', color: 'from-orange-500 to-yellow-500' },
-              { icon: Heart, label: 'Avg Heart Rate', value: '142', unit: 'bpm', color: 'from-red-500 to-pink-500' },
-              { icon: Activity, label: 'Active Minutes', value: '487', unit: 'mins', color: 'from-green-500 to-emerald-500' }
-            ].map((stat, i) => (
-              <div key={i} className={`bg-zinc-900 rounded-2xl p-6 border border-zinc-800 hover-lift ${animateIn ? 'animate-in' : 'opacity-0'}`} style={{ animationDelay: `${0.3 + i * 0.1}s` }}>
-                <div className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center mb-4`}>
-                  <stat.icon className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-3xl font-display font-bold mb-1">{stat.value}</div>
-                <div className="text-sm text-gray-500">{stat.label}</div>
-                <div className="text-xs text-gray-600 mt-1">{stat.unit}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Special Features - BMI Tracker & Portion Control */}
-      <section className="relative z-10 px-8 py-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-4xl font-display font-bold">
-              SPECIAL <span className="text-orange-500">FEATURES</span>
-            </h3>
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-6">
-            {/* BMI Tracker */}
-            <div className={`bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-3xl p-8 border-2 border-orange-500/40 hover-lift ${animateIn ? 'animate-in stagger-3' : 'opacity-0'}`}>
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
-                    <Scale className="w-7 h-7 text-black" />
-                  </div>
-                  <div>
-                    <h4 className="text-2xl font-display font-bold">BMI TRACKER</h4>
-                    <p className="text-sm text-gray-500">Track your body mass index</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setShowBmiCalc(!showBmiCalc)}
-                  className="text-orange-500 hover:text-orange-400 transition"
-                >
-                  {showBmiCalc ? '−' : '+'}
-                </button>
-              </div>
-
-              {showBmiCalc ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm text-gray-400 mb-2 block">Weight (kg)</label>
-                    <input 
-                      type="number" 
-                      value={bmiData.weight}
-                      onChange={(e) => setBmiData({...bmiData, weight: parseFloat(e.target.value)})}
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:border-orange-500 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-400 mb-2 block">Height (cm)</label>
-                    <input 
-                      type="number" 
-                      value={bmiData.height}
-                      onChange={(e) => setBmiData({...bmiData, height: parseFloat(e.target.value)})}
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:border-orange-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="mt-6 bg-black/40 rounded-2xl p-6 border border-orange-500/20">
-                <div className="text-center">
-                  <div className="text-6xl font-display font-bold text-orange-500 mb-2">{calculateBMI()}</div>
-                  <div className={`text-lg font-semibold ${getBMICategory(calculateBMI()).color}`}>
-                    {getBMICategory(calculateBMI()).text}
-                  </div>
-                </div>
-                
-                <div className="mt-6 h-2 bg-zinc-800 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-blue-500 via-green-500 via-yellow-500 to-red-500 transition-all"
-                    style={{ width: `${Math.min((calculateBMI() / 40) * 100, 100)}%` }}
-                  />
-                </div>
-                
-                <div className="mt-4 grid grid-cols-4 gap-2 text-xs text-gray-500">
-                  <div>Under<br/>(&lt;18.5)</div>
-                  <div>Normal<br/>(18.5-25)</div>
-                  <div>Over<br/>(25-30)</div>
-                  <div>Obese<br/>(&gt;30)</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Portion Control */}
-            <div className={`bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-3xl p-8 border-2 border-orange-500/40 hover-lift ${animateIn ? 'animate-in stagger-4' : 'opacity-0'}`}>
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
-                    <Utensils className="w-7 h-7 text-black" />
-                  </div>
-                  <div>
-                    <h4 className="text-2xl font-display font-bold">PORTION CONTROL</h4>
-                    <p className="text-sm text-gray-500">Monitor your daily macros</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setShowPortionControl(!showPortionControl)}
-                  className="text-orange-500 hover:text-orange-400 transition"
-                >
-                  {showPortionControl ? '−' : '+'}
-                </button>
-              </div>
-
-              {showPortionControl ? (
-                <div className="mb-6 space-y-3">
-                  <button 
-                    onClick={() => addMeal('Breakfast', 25, 45, 12)}
-                    className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl px-4 py-3 text-left transition flex items-center justify-between"
-                  >
-                    <span>Add Breakfast</span>
-                    <PlusCircle className="w-5 h-5 text-orange-500" />
-                  </button>
-                  <button 
-                    onClick={() => addMeal('Lunch', 35, 60, 18)}
-                    className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl px-4 py-3 text-left transition flex items-center justify-between"
-                  >
-                    <span>Add Lunch</span>
-                    <PlusCircle className="w-5 h-5 text-orange-500" />
-                  </button>
-                  <button 
-                    onClick={() => addMeal('Dinner', 40, 55, 20)}
-                    className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl px-4 py-3 text-left transition flex items-center justify-between"
-                  >
-                    <span>Add Dinner</span>
-                    <PlusCircle className="w-5 h-5 text-orange-500" />
-                  </button>
-                  <button 
-                    onClick={() => addMeal('Snack', 10, 20, 8)}
-                    className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl px-4 py-3 text-left transition flex items-center justify-between"
-                  >
-                    <span>Add Snack</span>
-                    <PlusCircle className="w-5 h-5 text-orange-500" />
-                  </button>
-                </div>
-              ) : null}
-
-              <div className="bg-black/40 rounded-2xl p-6 border border-green-500/20">
-                <div className="text-sm text-gray-400 mb-4">Today's Macros</div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm text-gray-300">Protein</span>
-                      <span className="text-sm font-bold text-orange-500">{totalMacros.protein}g / 150g</span>
-                    </div>
-                    <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-orange-500 to-orange-600" style={{ width: `${(totalMacros.protein / 150) * 100}%` }} />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm text-gray-300">Carbs</span>
-                      <span className="text-sm font-bold text-green-500">{totalMacros.carbs}g / 200g</span>
-                    </div>
-                    <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-green-500 to-emerald-600" style={{ width: `${(totalMacros.carbs / 200) * 100}%` }} />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm text-gray-300">Fats</span>
-                      <span className="text-sm font-bold text-yellow-500">{totalMacros.fats}g / 65g</span>
-                    </div>
-                    <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-yellow-500 to-amber-600" style={{ width: `${(totalMacros.fats / 65) * 100}%` }} />
-                    </div>
-                  </div>
-                </div>
-
-                {meals.length > 0 && (
-                  <div className="mt-6 pt-6 border-t border-zinc-800">
-                    <div className="text-xs text-gray-500 mb-3">Recent Meals</div>
-                    <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {meals.slice(-3).reverse().map(meal => (
-                        <div key={meal.id} className="flex justify-between items-center text-xs bg-zinc-900/50 rounded-lg px-3 py-2">
-                          <span className="text-gray-300">{meal.type}</span>
-                          <span className="text-gray-500">{meal.time}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Recent Workouts */}
-      <section className="relative z-10 px-8 py-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-4xl font-display font-bold">
-              RECENT <span className="text-orange-500">WORKOUTS</span>
-            </h3>
-            <button className="text-orange-500 hover:text-orange-400 font-semibold flex items-center gap-2">
-              View All
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              { name: 'Upper Body Strength', duration: '45 min', calories: 387, date: 'Today', type: 'Strength' },
-              { name: 'HIIT Cardio Blast', duration: '30 min', calories: 425, date: 'Yesterday', type: 'Cardio' },
-              { name: 'Core & Abs Crusher', duration: '25 min', calories: 198, date: '2 days ago', type: 'Core' }
-            ].map((workout, i) => (
-              <div key={i} className="bg-zinc-900 rounded-2xl p-6 border border-zinc-800 hover-lift cursor-pointer group">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-xl flex items-center justify-center group-hover:from-orange-500 group-hover:to-orange-600 transition">
-                    <Dumbbell className="w-6 h-6 text-orange-500 group-hover:text-black transition" />
-                  </div>
-                  <span className="text-xs bg-orange-500/10 text-orange-500 px-3 py-1 rounded-full">{workout.type}</span>
-                </div>
-                <h4 className="font-bold text-lg mb-2">{workout.name}</h4>
-                <div className="flex items-center gap-4 text-sm text-gray-500">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="w-4 h-4" />
-                    {workout.date}
-                  </div>
-                  <div>•</div>
-                  <div>{workout.duration}</div>
-                </div>
-                <div className="mt-4 pt-4 border-t border-zinc-800 flex items-center justify-between">
-                  <span className="text-sm text-gray-400">Calories</span>
-                  <span className="font-bold text-orange-500">{workout.calories} kcal</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Weekly Progress */}
-      <section className="relative z-10 px-8 py-12 mb-12">
-        <div className="max-w-7xl mx-auto">
-          <h3 className="text-4xl font-display font-bold mb-8">
-            WEEKLY <span className="text-orange-500">PROGRESS</span>
-          </h3>
-
-          <div className="bg-zinc-900 rounded-3xl p-8 border border-zinc-800">
-            <div className="flex items-end justify-between h-64 gap-4">
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => {
-                const heights = [65, 80, 45, 90, 75, 50, 85];
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-3 group cursor-pointer">
-                    <div className="w-full bg-zinc-800 rounded-t-xl overflow-hidden relative hover-lift" style={{ height: `${heights[i]}%` }}>
-                      <div className="absolute inset-0 bg-gradient-to-t from-orange-500 to-orange-600 group-hover:from-orange-400 group-hover:to-orange-500 transition" />
-                      <div className="absolute inset-0 flex items-center justify-center text-sm font-bold text-black opacity-0 group-hover:opacity-100 transition">
-                        {Math.round(heights[i] * 3)}m
-                      </div>
-                    </div>
-                    <span className="text-sm text-gray-500 group-hover:text-orange-500 transition">{day}</span>
-                  </div>
-                );
-              })}
-            </div>
-            
-            <div className="mt-8 flex items-center justify-center gap-8 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-orange-500" />
-                <span className="text-gray-400">Active Minutes</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-400">Total:</span>
-                <span className="font-bold text-orange-500">487 minutes</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer CTA */}
-      <section className="relative z-10 px-8 py-16 mb-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-3xl p-12 text-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-black/10" style={{ 
-              backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(0,0,0,.1) 20px, rgba(0,0,0,.1) 40px)' 
-            }} />
-            <div className="relative z-10">
-              <h3 className="text-5xl font-display font-bold text-black mb-4">READY TO TRANSFORM?</h3>
-              <p className="text-xl text-black/80 mb-8 max-w-2xl mx-auto">
-                Join thousands of members crushing their goals every single day
-              </p>
-              <button className="bg-black hover:bg-zinc-900 text-white font-bold px-10 py-4 rounded-full text-lg transition inline-flex items-center gap-3 group">
-                Start Your Journey
-                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-900 text-orange-500">
+      <Activity className="animate-spin w-12 h-12" />
     </div>
   );
-}
+
+  return (
+    <div className="min-h-screen bg-gray-50 font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        {/* 🏆 Trophy Case Section */}
+        <section className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 overflow-hidden relative">
+          <Trophy className="absolute -right-8 -top-8 text-orange-50/50 w-48 h-48 -rotate-12" />
+          <div className="relative z-10">
+            <h2 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-2">
+              <Award className="text-orange-500" size={28} /> Your Trophy Case
+            </h2>
+            {loadingBadges ? (
+              <div className="flex gap-4 animate-pulse">
+                {[1, 2, 3].map(i => <div key={i} className="w-24 h-24 bg-gray-100 rounded-2xl" />)}
+              </div>
+            ) : badges.length === 0 ? (
+              <div className="bg-orange-50/50 border border-dashed border-orange-200 rounded-2xl p-8 text-center">
+                <p className="text-orange-600 font-medium">No badges yet. Keep training to impress your trainer! 🔥</p>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-6">
+                {badges.map((badge) => (
+                  <div key={badge.id} className="group relative flex flex-col items-center bg-white p-4 rounded-2xl border-2 border-gray-50 hover:border-orange-200 hover:shadow-xl hover:shadow-orange-500/10 transition-all cursor-default">
+                    <div className="text-5xl mb-3 filter drop-shadow-md group-hover:scale-110 transition-transform">{badge.icon}</div>
+                    <h3 className="text-sm font-black text-gray-900 text-center leading-tight">{badge.title}</h3>
+                    <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                      <Star size={10} className="fill-orange-400 text-orange-400" /> {badge.trainerName}
+                    </p>
+                    <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl z-50">
+                      {badge.description || "Achievement Unlocked!"}
+                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* 📊 Top Stats Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl p-6 text-white shadow-lg transform hover:scale-[1.02] transition-transform">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-orange-100 font-medium mb-1">Current BMI</p>
+                <h2 className="text-4xl font-bold">{latestBMI ? latestBMI.bmi : '--'}</h2>
+                <p className="text-sm mt-2 opacity-90">{latestBMI ? getBMICategory(latestBMI.bmi) : 'Log your first weight!'}</p>
+              </div>
+              <Scale size={32} className="opacity-80" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col justify-center">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-gray-500 font-medium">Daily Calories</span>
+              <Flame className="text-orange-500" size={24} />
+            </div>
+            <div className="flex items-end gap-2 mb-3">
+              <span className="text-4xl font-bold text-gray-900">{totalCalories}</span>
+              <span className="text-gray-400 mb-1 font-medium">/ {CALORIE_GOAL} kcal</span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2.5">
+              <div className={`h-2.5 rounded-full ${totalCalories > CALORIE_GOAL ? 'bg-red-500' : 'bg-orange-500'}`} style={{ width: `${Math.min((totalCalories / CALORIE_GOAL) * 100, 100)}%` }}></div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col justify-center">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-gray-500 font-medium">Current Weight</span>
+              <Target className="text-blue-500" size={24} />
+            </div>
+            <h2 className="text-4xl font-bold text-gray-900">{latestBMI ? `${latestBMI.weight} kg` : '--'}</h2>
+            <p className="text-gray-400 text-sm mt-2">Keep pushing towards your goal!</p>
+          </div>
+        </div>
+
+        {/* 📝 Main Tracking Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* BMI Tracker */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
+            <div className="flex items-center gap-2 mb-6">
+              <Scale className="text-orange-500" size={24}/>
+              <h2 className="text-xl font-bold text-gray-900">Body Metrics</h2>
+            </div>
+            <form onSubmit={handleBMISubmit} className="bg-gray-50 p-4 rounded-xl mb-6">
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase">Height (cm)</label>
+                  <input type="number" value={bmiForm.height} onChange={(e) => setBmiForm({...bmiForm, height: e.target.value})} className="mt-1 w-full p-2.5 bg-white border border-gray-200 rounded-lg outline-none" placeholder="175" step="0.1" required />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase">Weight (kg)</label>
+                  <input type="number" value={bmiForm.weight} onChange={(e) => setBmiForm({...bmiForm, weight: e.target.value})} className="mt-1 w-full p-2.5 bg-white border border-gray-200 rounded-lg outline-none" placeholder="70" step="0.1" required />
+                </div>
+              </div>
+              <button type="submit" className="w-full bg-gray-900 text-white font-medium py-2.5 rounded-lg hover:bg-orange-600 transition-colors flex justify-center items-center gap-2">
+                <Plus size={18}/> Log Measurement
+              </button>
+            </form>
+            <div className="flex-1 overflow-y-auto pr-2 max-h-[300px] space-y-3 custom-scrollbar">
+              {bmiRecords.map((r) => (
+                <div key={r.id} className="flex justify-between items-center p-4 border border-gray-100 rounded-xl bg-white">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-lg text-gray-900">{r.bmi} BMI</span>
+                      <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-md font-medium">{getBMICategory(r.bmi)}</span>
+                    </div>
+                    <span className="text-sm text-gray-400">{r.weight}kg | {new Date(r.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <button onClick={() => handleDeleteBMI(r.id)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Nutrition Log */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
+            <div className="flex items-center gap-2 mb-6">
+              <Flame className="text-orange-500" size={24}/>
+              <h2 className="text-xl font-bold text-gray-900">Nutrition Log</h2>
+            </div>
+            <form onSubmit={handleMealSubmit} className="bg-gray-50 p-4 rounded-xl mb-6">
+              <div className="mb-4">
+                <label className="text-xs font-bold text-gray-500 uppercase">Meal Name</label>
+                <input type="text" value={mealForm.type} onChange={(e) => setMealForm({...mealForm, type: e.target.value})} className="mt-1 w-full p-2.5 bg-white border border-gray-200 rounded-lg outline-none" placeholder="e.g. Chicken Salad" required />
+              </div>
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase">Protein</label>
+                  <input type="number" value={mealForm.protein} onChange={(e) => setMealForm({...mealForm, protein: e.target.value})} className="mt-1 w-full p-2 bg-white border border-gray-200 rounded-lg outline-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase">Carbs</label>
+                  <input type="number" value={mealForm.carbs} onChange={(e) => setMealForm({...mealForm, carbs: e.target.value})} className="mt-1 w-full p-2 bg-white border border-gray-200 rounded-lg outline-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase">Fats</label>
+                  <input type="number" value={mealForm.fats} onChange={(e) => setMealForm({...mealForm, fats: e.target.value})} className="mt-1 w-full p-2 bg-white border border-gray-200 rounded-lg outline-none" />
+                </div>
+              </div>
+              <button type="submit" className="w-full bg-gray-900 text-white font-medium py-2.5 rounded-lg hover:bg-orange-600 transition-colors flex justify-center items-center gap-2">
+                <Plus size={18}/> Log Meal
+              </button>
+            </form>
+            <div className="flex-1 overflow-y-auto pr-2 max-h-[220px] space-y-3 custom-scrollbar">
+              {meals.map((m) => (
+                <div key={m.id} className="flex justify-between items-center p-3 border border-gray-100 rounded-xl bg-white">
+                  <div className="flex-1">
+                    <p className="font-bold text-gray-900">{m.type}</p>
+                    <div className="flex gap-3 mt-1">
+                      <span className="text-xs font-semibold text-orange-500">{Math.round(calculateCalories(m.protein, m.carbs, m.fats))} kcal</span>
+                      <span className="text-xs text-gray-400">P:{m.protein||0} C:{m.carbs||0} F:{m.fats||0}</span>
+                    </div>
+                  </div>
+                  <button onClick={() => handleDeleteMeal(m.id)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 💪 Training Plan Section */}
+        <div className="bg-gray-900 rounded-2xl p-8 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500 opacity-10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+          <div className="relative z-10 mb-8 flex items-center justify-between border-b border-gray-800 pb-4">
+            <div>
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <Dumbbell className="text-orange-500" /> Your Training Plan
+              </h2>
+              <p className="text-gray-400 mt-1 text-sm">
+                Based on your profile: <span className="text-orange-400 font-semibold">{latestBMI ? getBMICategory(latestBMI.bmi) : 'Update BMI'}</span>
+              </p>
+            </div>
+          </div>
+          {exercises.length === 0 ? (
+            <div className="text-center py-8 border border-dashed border-gray-700 rounded-xl text-gray-500">Log height and weight above to unlock your plan.</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+              {exercises.map((ex, i) => (
+                <div key={i} className="bg-gray-800 border border-gray-700 hover:border-orange-500/50 p-6 rounded-xl transition-all group">
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-lg font-bold text-white group-hover:text-orange-400 transition-colors">{ex.name}</h3>
+                    <span className="text-[10px] font-bold px-2.5 py-1 bg-gray-700 text-gray-300 rounded-md">{ex.diff}</span>
+                  </div>
+                  <p className="text-gray-400 text-sm mb-4">{ex.desc}</p>
+                  <div className="flex items-center gap-2 text-gray-500 text-sm font-medium">
+                    <Clock size={16} className="text-orange-500" /> {ex.time}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
