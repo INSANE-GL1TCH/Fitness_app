@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, User, Dumbbell } from 'lucide-react';
 import jj from "../assets/register.jpg";
 import { createUserApi } from '../services/api';
 import { toast } from 'react-hot-toast';
@@ -9,11 +9,13 @@ const Register = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
+    role: 'user', 
     agreedToTerms: false
   });
 
@@ -67,6 +69,7 @@ const Register = () => {
         username: formData.name,
         email: formData.email,
         password: formData.password,
+        role: formData.role 
       };
       
       const response = await createUserApi(dataToSubmit);
@@ -78,6 +81,7 @@ const Register = () => {
           email: '',
           password: '',
           confirmPassword: '',
+          role: 'user',
           agreedToTerms: false,
         });
         // Navigate to login after successful registration
@@ -102,6 +106,41 @@ const Register = () => {
           </div>
 
           <div className="space-y-5">
+            
+            {/* 👇 NEW: Role Selection UI */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                I am signing up as a...
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, role: 'user' }))}
+                  className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border transition-all ${
+                    formData.role === 'user' 
+                      ? 'bg-orange-50 border-orange-500 text-orange-700 font-bold ring-1 ring-orange-500' 
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-orange-200'
+                  }`}
+                >
+                  <User size={18} className={formData.role === 'user' ? 'text-orange-500' : 'text-gray-400'} />
+                  Member
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, role: 'trainer' }))}
+                  className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border transition-all ${
+                    formData.role === 'trainer' 
+                      ? 'bg-gray-900 border-gray-900 text-white font-bold ring-1 ring-gray-900' 
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-gray-400'
+                  }`}
+                >
+                  <Dumbbell size={18} className={formData.role === 'trainer' ? 'text-white' : 'text-gray-400'} />
+                  Trainer
+                </button>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Name*
