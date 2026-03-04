@@ -40,11 +40,15 @@ router.get("/my-badges", authGuard, badgeController.getMyBadges);
 // ----- Meal Routes -----
 router.post("/meals", authGuard, mealController.addMeal);
 router.get("/meals", authGuard, mealController.getMeals);
+// 👇 NEW: The Update Route!
+router.put("/meals/:id", authGuard, mealController.updateMeal);
 router.delete("/meals/:id", authGuard, mealController.deleteMeal);
 
 // ----- BMI Routes -----
 router.post("/bmi", authGuard, bmiController.addBMI);
 router.get("/bmi", authGuard, bmiController.getBMI);
+// 🌟 NEW: The Update Route for Body Metrics!
+router.put("/bmi/:id", authGuard, bmiController.updateBMI);
 router.delete("/bmi/:id", authGuard, bmiController.deleteBMI);
 
 //  ----- Workout Routes -----
