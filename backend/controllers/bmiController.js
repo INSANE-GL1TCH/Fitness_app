@@ -55,6 +55,49 @@ const getBMI = async (req, res) => {
   }
 };
 
+// 📝 NEW: Update an existing BMI record
+const updateBMI = async (req, res) => {
+  const { id } = req.params;
+  const { weight, height } = req.body;
+  const userId = req.user.id;
+
+  try {
+    // Ensure they can only edit their own record
+    const bmiRecord = await BMI.findOne({ where: { id, userId } });
+
+    if (!bmiRecord) {
+      return res.status(404).json({
+        message: "BMI record not found or unauthorized",
+      });
+    }
+
+    // Use the new values or fall back to the existing ones
+    const newHeight = height !== undefined ? parseFloat(height) : bmiRecord.height;
+    const newWeight = weight !== undefined ? parseFloat(weight) : bmiRecord.weight;
+
+    // Recalculate the BMI score
+    const heightInMeters = newHeight / 100;
+    const newBmiValue = (newWeight / (heightInMeters * heightInMeters)).toFixed(1);
+
+    // Update the database
+    await bmiRecord.update({
+      weight: newWeight,
+      height: newHeight,
+      bmi: newBmiValue,
+    });
+
+    return res.status(200).json({
+      message: "BMI updated successfully",
+      data: bmiRecord,
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
 const deleteBMI = async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
@@ -85,5 +128,6 @@ const deleteBMI = async (req, res) => {
 module.exports = {
   addBMI,
   getBMI,
+  updateBMI, // 👈 Export the new update function!
   deleteBMI,
 };
