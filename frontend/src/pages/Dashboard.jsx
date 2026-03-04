@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { addBMI, getBMI, deleteBMI, addMeal, getMeals, deleteMeal, getMyBadgesFromDB } from '../services/api';
+import { addBMI, getBMI, deleteBMI, updateBMIInDB, addMeal, getMeals, deleteMeal, updateMealInDB, getMyBadgesFromDB } from '../services/api';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Flame, Scale, Dumbbell, Trash2, Plus, Clock, Target, Award, Star, Trophy } from 'lucide-react';
+import { Activity, Flame, Scale, Dumbbell, Trash2, Edit2, Plus, Clock, Target, Award, Star, Trophy, X } from 'lucide-react';
 
 // --- Helpers ---
 const calculateCalories = (p, c, f) => (p * 4) + (c * 4) + (f * 9);
@@ -42,13 +42,16 @@ const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // BMI, Meal, and Badge States
+  // BMI States
   const [bmiRecords, setBmiRecords] = useState([]);
   const [latestBMI, setLatestBMI] = useState(null);
   const [bmiForm, setBmiForm] = useState({ height: '', weight: '' });
+  const [editingBmiId, setEditingBmiId] = useState(null); 
   
+  // Meal States
   const [meals, setMeals] = useState([]);
   const [mealForm, setMealForm] = useState({ type: '', protein: '', carbs: '', fats: '' });
+  const [editingMealId, setEditingMealId] = useState(null);
   const [totalCalories, setTotalCalories] = useState(0);
   const CALORIE_GOAL = 2000;
 
@@ -74,8 +77,20 @@ const Dashboard = () => {
     if (latestBMI) setExercises(getExerciseRecommendations(getBMICategory(latestBMI.bmi)));
   }, [latestBMI]);
 
+  // 🌟 NEW: Calculate Daily Calories (Only counts today's meals!)
   useEffect(() => {
-    const total = meals.reduce((sum, m) => sum + calculateCalories(m.protein||0, m.carbs||0, m.fats||0), 0);
+    const today = new Date();
+    
+    const todaysMeals = meals.filter((m) => {
+      const mealDate = new Date(m.createdAt);
+      return (
+        mealDate.getDate() === today.getDate() &&
+        mealDate.getMonth() === today.getMonth() &&
+        mealDate.getFullYear() === today.getFullYear()
+      );
+    });
+
+    const total = todaysMeals.reduce((sum, m) => sum + calculateCalories(m.protein||0, m.carbs||0, m.fats||0), 0);
     setTotalCalories(Math.round(total));
   }, [meals]);
 
@@ -99,9 +114,7 @@ const Dashboard = () => {
   const fetchBadges = async () => {
     try {
       const response = await getMyBadgesFromDB();
-      if (response.data.success) {
-        setBadges(response.data.data);
-      }
+      if (response.data.success) setBadges(response.data.data);
     } catch (error) {
       console.error("Error fetching badges:", error);
     } finally {
@@ -109,46 +122,89 @@ const Dashboard = () => {
     }
   };
 
-  // --- CRUD Handlers ---
+  // --- BMI Handlers ---
   const handleBMISubmit = async (e) => {
     e.preventDefault();
     if (!bmiForm.height || !bmiForm.weight) return toast.error('Enter height and weight');
+    
     try {
-      await addBMI({ height: parseFloat(bmiForm.height), weight: parseFloat(bmiForm.weight) });
-      toast.success('BMI Logged!');
+      const payload = { height: parseFloat(bmiForm.height), weight: parseFloat(bmiForm.weight) };
+      
+      if (editingBmiId) {
+        await updateBMIInDB(editingBmiId, payload);
+        toast.success('Record Updated!');
+        setEditingBmiId(null);
+      } else {
+        await addBMI(payload);
+        toast.success('BMI Logged!');
+      }
+      
       setBmiForm({ height: '', weight: '' });
       fetchAllData();
-    } catch (err) { toast.error('Failed to add BMI'); }
+    } catch (err) { toast.error(editingBmiId ? 'Failed to update record' : 'Failed to add BMI'); }
+  };
+
+  const handleEditBmiClick = (record) => {
+    setEditingBmiId(record.id);
+    setBmiForm({ height: record.height, weight: record.weight });
+  };
+
+  const cancelBmiEdit = () => {
+    setEditingBmiId(null);
+    setBmiForm({ height: '', weight: '' });
   };
 
   const handleDeleteBMI = async (id) => {
     try {
       await deleteBMI(id);
       toast.success('Record deleted');
+      if (editingBmiId === id) cancelBmiEdit();
       fetchAllData();
     } catch (err) { toast.error('Failed to delete'); }
   };
 
+  // --- Meal Handlers ---
   const handleMealSubmit = async (e) => {
     e.preventDefault();
     if (!mealForm.type) return toast.error('Enter meal name');
+    
     try {
-      await addMeal({
+      const payload = {
         type: mealForm.type,
         protein: parseInt(mealForm.protein) || 0,
         carbs: parseInt(mealForm.carbs) || 0,
         fats: parseInt(mealForm.fats) || 0
-      });
-      toast.success('Meal Logged!');
+      };
+
+      if (editingMealId) {
+        await updateMealInDB(editingMealId, payload);
+        toast.success('Meal Updated!');
+        setEditingMealId(null);
+      } else {
+        await addMeal(payload);
+        toast.success('Meal Logged!');
+      }
+
       setMealForm({ type: '', protein: '', carbs: '', fats: '' });
       fetchAllData();
-    } catch (err) { toast.error('Failed to add meal'); }
+    } catch (err) { toast.error(editingMealId ? 'Failed to update meal' : 'Failed to add meal'); }
+  };
+
+  const handleEditMealClick = (meal) => {
+    setEditingMealId(meal.id);
+    setMealForm({ type: meal.type, protein: meal.protein || '', carbs: meal.carbs || '', fats: meal.fats || '' });
+  };
+
+  const cancelMealEdit = () => {
+    setEditingMealId(null);
+    setMealForm({ type: '', protein: '', carbs: '', fats: '' });
   };
 
   const handleDeleteMeal = async (id) => {
     try {
       await deleteMeal(id);
       toast.success('Meal deleted');
+      if (editingMealId === id) cancelMealEdit(); 
       fetchAllData();
     } catch (err) { toast.error('Failed to delete'); }
   };
@@ -237,12 +293,14 @@ const Dashboard = () => {
 
         {/* 📝 Main Tracking Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* BMI Tracker */}
+          
+          {/* LEFT: BMI Tracker */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
             <div className="flex items-center gap-2 mb-6">
               <Scale className="text-orange-500" size={24}/>
               <h2 className="text-xl font-bold text-gray-900">Body Metrics</h2>
             </div>
+            
             <form onSubmit={handleBMISubmit} className="bg-gray-50 p-4 rounded-xl mb-6">
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
@@ -254,13 +312,22 @@ const Dashboard = () => {
                   <input type="number" value={bmiForm.weight} onChange={(e) => setBmiForm({...bmiForm, weight: e.target.value})} className="mt-1 w-full p-2.5 bg-white border border-gray-200 rounded-lg outline-none" placeholder="70" step="0.1" required />
                 </div>
               </div>
-              <button type="submit" className="w-full bg-gray-900 text-white font-medium py-2.5 rounded-lg hover:bg-orange-600 transition-colors flex justify-center items-center gap-2">
-                <Plus size={18}/> Log Measurement
-              </button>
+              <div className="flex gap-2">
+                <button type="submit" className="flex-1 bg-gray-900 text-white font-medium py-2.5 rounded-lg hover:bg-orange-600 transition-colors flex justify-center items-center gap-2">
+                  {editingBmiId ? <Edit2 size={18}/> : <Plus size={18}/>} 
+                  {editingBmiId ? 'Update Record' : 'Log Measurement'}
+                </button>
+                {editingBmiId && (
+                  <button type="button" onClick={cancelBmiEdit} className="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors" title="Cancel Edit">
+                    <X size={20} />
+                  </button>
+                )}
+              </div>
             </form>
+
             <div className="flex-1 overflow-y-auto pr-2 max-h-[300px] space-y-3 custom-scrollbar">
               {bmiRecords.map((r) => (
-                <div key={r.id} className="flex justify-between items-center p-4 border border-gray-100 rounded-xl bg-white">
+                <div key={r.id} className={`flex justify-between items-center p-4 border rounded-xl bg-white transition-all ${editingBmiId === r.id ? 'border-orange-400 shadow-md shadow-orange-100' : 'border-gray-100 hover:border-orange-200'}`}>
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-lg text-gray-900">{r.bmi} BMI</span>
@@ -268,18 +335,27 @@ const Dashboard = () => {
                     </div>
                     <span className="text-sm text-gray-400">{r.weight}kg | {new Date(r.createdAt).toLocaleDateString()}</span>
                   </div>
-                  <button onClick={() => handleDeleteBMI(r.id)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button>
+                  
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => handleEditBmiClick(r)} className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors" title="Edit Record">
+                      <Edit2 size={18} />
+                    </button>
+                    <button onClick={() => handleDeleteBMI(r.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete Record">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Nutrition Log */}
+          {/* RIGHT: Nutrition Log */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
             <div className="flex items-center gap-2 mb-6">
               <Flame className="text-orange-500" size={24}/>
               <h2 className="text-xl font-bold text-gray-900">Nutrition Log</h2>
             </div>
+            
             <form onSubmit={handleMealSubmit} className="bg-gray-50 p-4 rounded-xl mb-6">
               <div className="mb-4">
                 <label className="text-xs font-bold text-gray-500 uppercase">Meal Name</label>
@@ -287,25 +363,35 @@ const Dashboard = () => {
               </div>
               <div className="grid grid-cols-3 gap-3 mb-4">
                 <div>
-                  <label className="text-[10px] font-bold text-gray-500 uppercase">Protein</label>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase">Protein (g)</label>
                   <input type="number" value={mealForm.protein} onChange={(e) => setMealForm({...mealForm, protein: e.target.value})} className="mt-1 w-full p-2 bg-white border border-gray-200 rounded-lg outline-none" />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-gray-500 uppercase">Carbs</label>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase">Carbs (g)</label>
                   <input type="number" value={mealForm.carbs} onChange={(e) => setMealForm({...mealForm, carbs: e.target.value})} className="mt-1 w-full p-2 bg-white border border-gray-200 rounded-lg outline-none" />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-gray-500 uppercase">Fats</label>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase">Fats (g)</label>
                   <input type="number" value={mealForm.fats} onChange={(e) => setMealForm({...mealForm, fats: e.target.value})} className="mt-1 w-full p-2 bg-white border border-gray-200 rounded-lg outline-none" />
                 </div>
               </div>
-              <button type="submit" className="w-full bg-gray-900 text-white font-medium py-2.5 rounded-lg hover:bg-orange-600 transition-colors flex justify-center items-center gap-2">
-                <Plus size={18}/> Log Meal
-              </button>
+              
+              <div className="flex gap-2">
+                <button type="submit" className="flex-1 bg-gray-900 text-white font-medium py-2.5 rounded-lg hover:bg-orange-600 transition-colors flex justify-center items-center gap-2">
+                  {editingMealId ? <Edit2 size={18}/> : <Plus size={18}/>} 
+                  {editingMealId ? 'Update Meal' : 'Log Meal'}
+                </button>
+                {editingMealId && (
+                  <button type="button" onClick={cancelMealEdit} className="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors" title="Cancel Edit">
+                    <X size={20} />
+                  </button>
+                )}
+              </div>
             </form>
+
             <div className="flex-1 overflow-y-auto pr-2 max-h-[220px] space-y-3 custom-scrollbar">
               {meals.map((m) => (
-                <div key={m.id} className="flex justify-between items-center p-3 border border-gray-100 rounded-xl bg-white">
+                <div key={m.id} className={`flex justify-between items-center p-3 border rounded-xl bg-white transition-all ${editingMealId === m.id ? 'border-orange-400 shadow-md shadow-orange-100' : 'border-gray-100 hover:border-orange-200'}`}>
                   <div className="flex-1">
                     <p className="font-bold text-gray-900">{m.type}</p>
                     <div className="flex gap-3 mt-1">
@@ -313,7 +399,15 @@ const Dashboard = () => {
                       <span className="text-xs text-gray-400">P:{m.protein||0} C:{m.carbs||0} F:{m.fats||0}</span>
                     </div>
                   </div>
-                  <button onClick={() => handleDeleteMeal(m.id)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button>
+                  
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => handleEditMealClick(m)} className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors" title="Edit Meal">
+                      <Edit2 size={18} />
+                    </button>
+                    <button onClick={() => handleDeleteMeal(m.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete Meal">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
