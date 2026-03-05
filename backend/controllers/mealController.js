@@ -1,6 +1,6 @@
 const Meal = require("../models/mealModels");
 
-// ➕ CREATE: Add a new meal
+
 const addMeal = async (req, res) => {
   const { type, protein, carbs, fats } = req.body;
   const userId = req.user.id;
@@ -48,20 +48,19 @@ const updateMeal = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    // Ensure the meal exists AND belongs to the user
+   
     const meal = await Meal.findOne({ where: { id, userId } });
 
     if (!meal) {
       return res.status(404).json({ message: "Meal not found or unauthorized" });
     }
 
-    // Recalculate calories based on new inputs or existing values
+   
     const newProtein = protein !== undefined ? protein : meal.protein;
     const newCarbs = carbs !== undefined ? carbs : meal.carbs;
     const newFats = fats !== undefined ? fats : meal.fats;
     const newCalories = (Number(newProtein) * 4) + (Number(newCarbs) * 4) + (Number(newFats) * 9);
 
-    // Update the record
     await meal.update({
       type: type || meal.type,
       protein: newProtein,

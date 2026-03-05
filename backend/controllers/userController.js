@@ -214,7 +214,6 @@ const updatePassword = async (req, res) => {
   }
 };
 
-// 📋 Fetch all clients for the Trainer Dashboard
 const getTrainerClients = async (req, res) => {
   try {
     const clients = await RegisterUser.findAll({ 
@@ -267,7 +266,6 @@ const getTrainerClients = async (req, res) => {
   }
 };
 
-// 👇 NEW: Fetch full history for a specific client
 const getClientHistory = async (req, res) => {
   try {
     const { clientId } = req.params;
@@ -304,5 +302,4 @@ const getClientHistory = async (req, res) => {
   }
 };
 
-// 👇 UPDATED: Added getClientHistory to exports!
 module.exports = { registerUser, userLogin, forgotPassword, resetPassword, updateProfile, updatePassword, getTrainerClients, getClientHistory };

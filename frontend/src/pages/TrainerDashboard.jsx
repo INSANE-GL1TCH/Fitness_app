@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Activity, TrendingUp, ClipboardList, Search, Loader2, Dumbbell } from 'lucide-react';
-import { getTrainerClientsFromDB } from '../services/api'; // 👈 Import the API
+import { getTrainerClientsFromDB } from '../services/api';
 import { toast } from 'react-hot-toast';
 
 const TrainerDashboard = () => {
   const [user, setUser] = useState({ username: 'Coach' });
-  const [clients, setClients] = useState([]); // Real data goes here!
+  const [clients, setClients] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -15,7 +15,7 @@ const TrainerDashboard = () => {
     fetchClients();
   }, []);
 
-  // 📡 FETCH REAL DATA FROM POSTGRESQL
+  
   const fetchClients = async () => {
     try {
       const res = await getTrainerClientsFromDB();
@@ -33,7 +33,7 @@ const TrainerDashboard = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
       
-      {/* Header Section */}
+      
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-gray-900 tracking-tight">
@@ -43,7 +43,7 @@ const TrainerDashboard = () => {
         </div>
       </div>
 
-      {/* Top Stats Cards */}
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
           <div className="p-4 bg-orange-50 text-orange-600 rounded-xl"><Users size={24} /></div>
@@ -68,14 +68,13 @@ const TrainerDashboard = () => {
         </div>
       </div>
 
-      {/* Main Content Area */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
         <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <ClipboardList className="text-orange-500" /> Client Roster (Real DB Data)
           </h2>
           
-          {/* Search Bar */}
+          
           <div className="relative">
             <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
             <input 

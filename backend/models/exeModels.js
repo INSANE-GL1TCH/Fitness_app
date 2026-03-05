@@ -12,7 +12,7 @@ const WorkoutLog = sequelize.define(
         userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            // This links the workout to a specific user
+            
             references: {
                 model: 'users', 
                 key: 'id'
@@ -21,17 +21,17 @@ const WorkoutLog = sequelize.define(
         dateString: {
             type: DataTypes.STRING,
             allowNull: false,
-            // Example: 'Fri Feb 27 2026' (Matches your frontend perfectly)
+            
         },
         completedExercises: {
             type: DataTypes.JSON, 
             defaultValue: []
-            // Saves your array of IDs: [1, 2, 4, 5]
+            
         },
         dailyGoal: {
             type: DataTypes.STRING,
             allowNull: true
-            // Saves 'Lose Weight', 'Gain Mass', etc.
+            
         }
     },
     {

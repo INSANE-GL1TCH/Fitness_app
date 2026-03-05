@@ -1,35 +1,60 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+
+// Pages
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import ForgotPassword from './pages/Forgotpassword';
+import History from './pages/History';
+import Exercises from './pages/Exercise';
+import Profile from './pages/Profile';
+import TrainerDashboard from './pages/TrainerDashboard';
+import TrainerHistory from './pages/Trainerhistory'; 
+
+// Components
+import Header from './components/Header';
+import Footer from './components/Footer';
+
+const MainLayout = () => {
+  return (
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <Header />
+      
+      <main className="flex-grow">
+        <Outlet /> 
+      </main>
+      
+      <Footer />
+    </div>
+  );
+};
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <Router>
+      <Toaster position="top-right" />
+      <Routes>
+        <Route path="/" element={<Register />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        
+        {/* Protected Layout with Header & Footer */}
+        <Route element={<MainLayout />}>
+          {/* User Routes */}
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/exercise" element={<Exercises />} />
+          <Route path="/profile" element={<Profile />} />
+          
+          {/* Trainer Routes */}
+          
+          <Route path="/trainerdash" element={<TrainerDashboard />} /> 
+          <Route path="/trainer-history" element={<TrainerHistory />} />
+        </Route>
+      </Routes>
+    </Router>
+  );
 }
 
-export default App
+export default App;

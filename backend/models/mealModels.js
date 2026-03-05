@@ -15,7 +15,7 @@ const Meal = sequelize.define("Meal", {
   fats: {
     type: DataTypes.FLOAT,
   },
-  // 👇 MUST HAVE THIS COLUMN!
+ 
   calories: {
     type: DataTypes.INTEGER, 
   }

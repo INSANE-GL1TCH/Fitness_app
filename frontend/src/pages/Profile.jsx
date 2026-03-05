@@ -4,20 +4,20 @@ import { toast } from 'react-hot-toast';
 import { updateProfileInDB, updatePasswordInDB } from '../services/api';
 
 const Profile = () => {
-  // --- STATE ---
+
   const [user, setUser] = useState({ id: null, username: '', email: '' });
   
-  // Profile Edit State
+ 
   const [isEditing, setIsEditing] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [formData, setFormData] = useState({ username: '', email: '' });
 
-  // Password Edit State
+
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
   const [passwords, setPasswords] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
   
-  // 👀 NEW: Password Visibility State
+ 
   const [showPasswords, setShowPasswords] = useState({
     old: false,
     new: false,
@@ -34,7 +34,7 @@ const Profile = () => {
     setFormData({ username: storedUser.username, email: storedUser.email });
   }, []);
 
-  // --- HANDLERS ---
+  
   const handleSaveProfile = async () => {
     if (!formData.username || !formData.email) {
       return toast.error("Fields cannot be empty");
@@ -101,7 +101,7 @@ const Profile = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 animate-fade-in">
       
-      {/* Header */}
+      
       <div className="flex items-center gap-3 mb-8 border-b border-gray-200 pb-6">
         <div className="p-3 bg-orange-100 text-orange-600 rounded-xl">
           <User size={28} />
@@ -114,7 +114,7 @@ const Profile = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
-        {/* LEFT COLUMN: Avatar Card */}
+       
         <div className="md:col-span-1">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center text-center">
             <div className="relative group cursor-pointer mb-4">
@@ -137,10 +137,10 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Edit Form & Security */}
+        
         <div className="md:col-span-2 space-y-6">
           
-          {/* --- Personal Information Card --- */}
+          
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -206,7 +206,7 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* --- Security / Password Card --- */}
+          
           <div className="bg-gray-900 rounded-2xl shadow-sm border border-gray-800 p-6 md:p-8 relative overflow-hidden transition-all duration-300">
              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500 opacity-10 rounded-full blur-2xl pointer-events-none"></div>
              
@@ -234,7 +234,7 @@ const Profile = () => {
                ) : (
                  <form onSubmit={handleSavePassword} className="bg-gray-800 border border-gray-700 rounded-xl p-5 space-y-4 animate-fade-in">
                    
-                   {/* Current Password */}
+                   
                    <div>
                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Current Password</label>
                      <div className="relative">
@@ -255,7 +255,7 @@ const Profile = () => {
                      </div>
                    </div>
 
-                   {/* New Password */}
+                   
                    <div>
                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">New Password</label>
                      <div className="relative">
@@ -276,7 +276,7 @@ const Profile = () => {
                      </div>
                    </div>
 
-                   {/* Confirm New Password */}
+                   
                    <div>
                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Confirm New Password</label>
                      <div className="relative">

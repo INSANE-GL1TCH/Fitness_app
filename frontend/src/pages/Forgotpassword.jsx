@@ -14,15 +14,14 @@ const ForgotPassword = () => {
 
     setIsLoading(true);
 
-    // Simulate an API call to your backend
+   
     setTimeout(() => {
       setIsLoading(false);
       setIsSubmitted(true);
       toast.success("Reset link sent!");
     }, 1500);
 
-    // Note for later: When you wire up the backend, it will look like this:
-    // await Api.post('/api/user/forgot-password', { email });
+  
   };
 
   return (
@@ -42,7 +41,7 @@ const ForgotPassword = () => {
         <div className="bg-white py-8 px-4 shadow-xl sm:rounded-2xl sm:px-10 border border-gray-100">
           
           {!isSubmitted ? (
-            // --- STEP 1: Enter Email Form ---
+            
             <>
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Reset your password</h2>
@@ -82,7 +81,7 @@ const ForgotPassword = () => {
               </form>
             </>
           ) : (
-            // --- STEP 2: Success Message ---
+            
             <div className="text-center py-6">
               <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-6">
                 <CheckCircle2 className="h-8 w-8 text-green-600" />
@@ -101,7 +100,7 @@ const ForgotPassword = () => {
             </div>
           )}
 
-          {/* Back to Login Link */}
+          
           <div className="mt-8 border-t border-gray-100 pt-6">
             <Link to="/login" className="flex items-center justify-center gap-2 text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors">
               <ArrowLeft size={16} />

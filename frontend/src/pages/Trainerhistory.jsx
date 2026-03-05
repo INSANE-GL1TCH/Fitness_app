@@ -9,7 +9,7 @@ const TrainerHistory = () => {
   const [historyData, setHistoryData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // 🌟 NEW: Modal State
+  
   const [showBadgeModal, setShowBadgeModal] = useState(false);
   const [badgeForm, setBadgeForm] = useState({
     title: '',
@@ -58,7 +58,7 @@ const TrainerHistory = () => {
     fetchHistory();
   }, [selectedClientId]);
 
-  // 🌟 NEW: Handle Awarding Badge
+ 
   const handleAwardBadge = async (e) => {
     e.preventDefault();
     try {
@@ -111,7 +111,7 @@ const TrainerHistory = () => {
               ))}
             </select>
 
-            {/* 🌟 AWARD BADGE BUTTON */}
+            
             {selectedClientId && (
               <button 
                 onClick={() => setShowBadgeModal(true)}
@@ -124,10 +124,10 @@ const TrainerHistory = () => {
           </div>
         </div>
 
-        {/* Data Display */}
+        
         {selectedClientId && historyData && (
           <div className="grid md:grid-cols-2 gap-6">
-            {/* BMI History Table */}
+            
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <Activity className="text-orange-500" /> BMI History
@@ -158,7 +158,7 @@ const TrainerHistory = () => {
               )}
             </div>
 
-            {/* Meal History Table */}
+           
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <Utensils className="text-orange-500" /> Meal History
@@ -191,7 +191,7 @@ const TrainerHistory = () => {
           </div>
         )}
 
-        {/* 🌟 MODAL UI */}
+        
         {showBadgeModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl relative">

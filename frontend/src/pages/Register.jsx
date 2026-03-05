@@ -84,7 +84,7 @@ const Register = () => {
           role: 'user',
           agreedToTerms: false,
         });
-        // Navigate to login after successful registration
+        
         setTimeout(() => navigate('/login'), 1500);
       } else {
         toast.error(response?.data?.message);
@@ -107,7 +107,7 @@ const Register = () => {
 
           <div className="space-y-5">
             
-            {/* 👇 NEW: Role Selection UI */}
+            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 I am signing up as a...

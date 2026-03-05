@@ -3,7 +3,7 @@ import { getBMI, deleteBMI, updateBMIInDB, getMeals, deleteMeal, updateMealInDB 
 import { toast } from 'react-hot-toast';
 import { History as HistoryIcon, Scale, Flame, Trash2, Calendar, Edit2, X, Check } from 'lucide-react';
 
-// --- Helpers ---
+
 const calculateCalories = (p, c, f) => (p * 4) + (c * 4) + (f * 9);
 
 const getBMICategory = (bmi) => {
@@ -24,7 +24,7 @@ const History = () => {
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // --- Inline Edit States ---
+  
   const [editingBmiId, setEditingBmiId] = useState(null);
   const [editBmiForm, setEditBmiForm] = useState({ height: '', weight: '' });
 
@@ -50,7 +50,7 @@ const History = () => {
     }
   };
 
-  // --- BMI Action Handlers ---
+  
   const handleDeleteBMI = async (id) => {
     if (!window.confirm('Delete this BMI record?')) return;
     try {
@@ -67,11 +67,11 @@ const History = () => {
       await updateBMIInDB(id, payload);
       toast.success('BMI Updated!');
       setEditingBmiId(null);
-      fetchAllData(); // Refresh to get the newly calculated BMI
+      fetchAllData(); 
     } catch (err) { toast.error('Failed to update BMI'); }
   };
 
-  // --- Meal Action Handlers ---
+  
   const handleDeleteMeal = async (id) => {
     if (!window.confirm('Delete this meal?')) return;
     try {
@@ -93,7 +93,7 @@ const History = () => {
       await updateMealInDB(id, payload);
       toast.success('Meal Updated!');
       setEditingMealId(null);
-      fetchAllData(); // Refresh to get updated data
+      fetchAllData(); 
     } catch (err) { toast.error('Failed to update meal'); }
   };
 
@@ -102,7 +102,7 @@ const History = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
       
-      {/* Page Header */}
+     
       <div className="flex items-center gap-3 mb-8 border-b border-gray-200 pb-6">
         <div className="p-3 bg-orange-100 text-orange-600 rounded-xl">
           <HistoryIcon size={28} />
@@ -115,7 +115,7 @@ const History = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        {/* LEFT: BMI History */}
+       
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col h-[700px]">
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
             <div className="flex items-center gap-2">
@@ -136,7 +136,7 @@ const History = () => {
                 return (
                   <div key={r.id} className={`group relative p-4 border rounded-xl transition-all ${isEditing ? 'border-orange-400 bg-orange-50 shadow-md' : 'border-gray-100 bg-gray-50 hover:bg-white hover:border-orange-200 hover:shadow-md'}`}>
                     
-                    {/* Header (Date + Actions) */}
+                    
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
                         <Calendar size={14} /> {formatDate(r.createdAt)}
@@ -157,7 +157,7 @@ const History = () => {
                       )}
                     </div>
 
-                    {/* Content (Display vs Edit Mode) */}
+                    
                     {isEditing ? (
                       <div className="mt-3 space-y-3">
                         <div className="grid grid-cols-2 gap-3">
@@ -197,7 +197,7 @@ const History = () => {
           </div>
         </div>
 
-        {/* RIGHT: Meals History */}
+        
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col h-[700px]">
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
             <div className="flex items-center gap-2">
@@ -217,7 +217,7 @@ const History = () => {
                 return (
                   <div key={m.id} className={`group relative p-4 border rounded-xl transition-all ${isEditing ? 'border-orange-400 bg-orange-50 shadow-md' : 'border-gray-100 bg-gray-50 hover:bg-white hover:border-orange-200 hover:shadow-md'}`}>
                     
-                    {/* Header (Date + Actions) */}
+                   
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
                         <Calendar size={14} /> {formatDate(m.createdAt)}
@@ -238,7 +238,7 @@ const History = () => {
                       )}
                     </div>
                     
-                    {/* Content (Display vs Edit Mode) */}
+                    
                     {isEditing ? (
                       <div className="mt-2 space-y-3">
                         <div>

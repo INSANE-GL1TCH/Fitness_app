@@ -3,7 +3,6 @@ import { Dumbbell, Flame, Trophy, Calendar as CalendarIcon, CheckCircle2, Circle
 import { toast } from 'react-hot-toast';
 import { getBMI, saveWorkoutToDB, getWorkoutsFromDB } from '../services/api';
 
-// 🏋️‍♂️ The Master Exercise Database
 const exerciseDatabase = [
   { id: 1, name: "Barbell Squats", target: "Gain Mass", sets: "4 sets", reps: "8-10 reps", desc: "Heavy compound movement for leg growth." },
   { id: 2, name: "Deadlifts", target: "Gain Mass", sets: "3 sets", reps: "5-8 reps", desc: "Builds overall posterior chain mass." },
@@ -25,7 +24,7 @@ const exerciseDatabase = [
 const Exercises = () => {
   const [loading, setLoading] = useState(true);
   
-  // Get logged-in user ID
+  
   const user = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user')) || {};
   const userId = user.id;
 
@@ -39,19 +38,19 @@ const Exercises = () => {
   const [dailyGoals, setDailyGoals] = useState({});
   const [streak, setStreak] = useState(0);
 
-  // Load everything on startup
+  
   useEffect(() => {
     fetchUserData();
     if (userId) fetchDatabaseWorkouts();
   }, [userId]);
 
-  // Recalculate plan based on selected date
+ 
   useEffect(() => {
     let activeGoal = dailyGoals[selectedDate] || currentCalculatedGoal;
     setRecommendedPlan(exerciseDatabase.filter(ex => ex.target === activeGoal));
   }, [selectedDate, dailyGoals, currentCalculatedGoal]);
 
-  // Recalculate streak
+  
   useEffect(() => {
     if (recommendedPlan.length > 0) calculateStreak(dailyLogs);
   }, [dailyLogs, dailyGoals]);
@@ -75,7 +74,7 @@ const Exercises = () => {
     }
   };
 
-  // 📡 FETCH FROM POSTGRESQL DATABASE
+
   const fetchDatabaseWorkouts = async () => {
     try {
       const res = await getWorkoutsFromDB(userId);
@@ -123,12 +122,12 @@ const Exercises = () => {
     }
 
     const currentDayLogs = dailyLogs[selectedDate] || [];
-    if (currentDayLogs.includes(exerciseId)) return; // Locked
+    if (currentDayLogs.includes(exerciseId)) return; 
 
     const newDayLogs = [...currentDayLogs, exerciseId];
     const newGoal = dailyGoals[selectedDate] || recommendedPlan[0].target;
 
-    // 1. Update React State instantly for snappy UI
+    
     setDailyLogs(prev => ({ ...prev, [selectedDate]: newDayLogs }));
     setDailyGoals(prev => ({ ...prev, [selectedDate]: newGoal }));
 
@@ -136,7 +135,7 @@ const Exercises = () => {
       toast.success("Day Complete! Streak locked in! 🔥", { icon: '🏆' });
     }
 
-    // 2. 📡 SAVE DIRECTLY TO POSTGRESQL DATABASE
+    
     try {
       await saveWorkoutToDB({
         userId: userId,
@@ -150,7 +149,7 @@ const Exercises = () => {
     }
   };
 
-  // --- Monthly Calendar Logic ---
+
   const prevMonth = () => setCurrentMonthView(new Date(currentMonthView.getFullYear(), currentMonthView.getMonth() - 1, 1));
   const nextMonth = () => setCurrentMonthView(new Date(currentMonthView.getFullYear(), currentMonthView.getMonth() + 1, 1));
 
@@ -220,18 +219,18 @@ const Exercises = () => {
         </div>
       </div>
 
-      {/* Calendar Dashboard */}
+    
       <div className="bg-gray-900 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden flex flex-col lg:flex-row gap-8">
         <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500 opacity-10 rounded-full blur-3xl pointer-events-none"></div>
         
-        {/* Left Side: Streak */}
+       
         <div className="flex flex-col justify-center items-center p-6 bg-gray-800/50 rounded-2xl border border-gray-700 lg:w-1/3 z-10">
           <Flame className={`${streak > 0 ? 'text-orange-500 animate-pulse' : 'text-gray-500'}`} size={56} />
           <h2 className="text-6xl font-black text-white mt-4">{streak}</h2>
           <p className="text-orange-400 font-bold tracking-wide uppercase text-sm mt-1">Day Streak</p>
         </div>
 
-        {/* Right Side: Full Calendar */}
+      
         <div className="flex-1 z-10">
           <div className="flex justify-between items-center mb-4 px-2">
             <button onClick={prevMonth} className="p-2 text-gray-400 hover:text-white bg-gray-800 rounded-lg transition-colors"><ChevronLeft size={20}/></button>
@@ -250,7 +249,7 @@ const Exercises = () => {
         </div>
       </div>
 
-      {/* 📝 Daily Interactive Workout Plan */}
+      
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-gray-100 pb-6">
           <div className="flex items-center gap-3">
@@ -280,7 +279,7 @@ const Exercises = () => {
           </div>
         </div>
 
-        {/* Exercise List */}
+      
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {recommendedPlan.map((ex) => {
             const isDone = dailyLogs[selectedDate]?.includes(ex.id);

@@ -54,10 +54,10 @@ const Login = () => {
       if (response?.data?.success) {
         toast.success(response?.data?.message || 'Login successful!');
         
-        // Grab the user data containing the role
+        
         const userData = response?.data?.user;
         
-        // Store token and user data
+       
         if (formData.rememberMe) {
           localStorage.setItem('token', response?.data?.token);
           localStorage.setItem('user', JSON.stringify(userData));
@@ -72,12 +72,12 @@ const Login = () => {
           rememberMe: false,
         });
 
-        // 👇 NEW: The Traffic Cop logic! Direct users based on their role
+        
         setTimeout(() => {
           if (userData?.role === 'trainer') {
-            navigate('/trainerdash'); // Send trainers to their special dashboard
+            navigate('/trainerdash'); 
           } else {
-            navigate('/dashboard'); // Send regular users to the standard dashboard
+            navigate('/dashboard');
           }
         }, 1000);
 

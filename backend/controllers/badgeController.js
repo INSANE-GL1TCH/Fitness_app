@@ -1,7 +1,6 @@
 const Badge = require("../models/badgeModels");
 const RegisterUser = require("../models/userModels");
 
-// 🏆 TRAINER: Give a badge to a client
 const awardBadge = async (req, res) => {
   try {
     const { clientId, title, description, icon } = req.body;
@@ -18,7 +17,7 @@ const awardBadge = async (req, res) => {
       description,
       icon: icon || "🏆",
       trainerName: trainer.username,
-      userId: clientId // Pin the badge to the user's chest!
+      userId: clientId 
     });
 
     return res.status(201).json({ success: true, message: "Badge awarded successfully!", data: badge });
@@ -28,7 +27,7 @@ const awardBadge = async (req, res) => {
   }
 };
 
-// 🏅 USER: Look at all my earned badges
+
 const getMyBadges = async (req, res) => {
   try {
     const userId = req.user.id;

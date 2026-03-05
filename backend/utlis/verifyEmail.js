@@ -4,7 +4,7 @@ const nodemailer = require("nodemailer");
 
 
 
-//sending email
+
 const sendEmail = async(to, subject, html) => {
     const transporter = nodemailer.createTransport({
         service: "gmail",
@@ -22,7 +22,6 @@ const sendEmail = async(to, subject, html) => {
     });
 };
 
-//verifying email
 const verifyEmail = async(req, res) => {
     try{
         const {token} = req.query;
@@ -33,7 +32,6 @@ const verifyEmail = async(req, res) => {
             });
         }
 
-        //find user with valid token
         const user = await Register.findOne({where: {verificationToken: token}});
 
         if(!user){
@@ -43,7 +41,7 @@ const verifyEmail = async(req, res) => {
             });
         }
 
-        //check expiry
+   
         if(user.verificationTokenExpires < new Date()){
             return res.status(400).json({
                 message: "Token expired. Retry"
@@ -51,7 +49,7 @@ const verifyEmail = async(req, res) => {
         }
 
 
-        //reset verification tokens
+        
         user.isVerified = true;
         user.verificationToken = null;
         user.verificationTokenExpires = null;

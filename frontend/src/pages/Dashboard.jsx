@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { Activity, Flame, Scale, Dumbbell, Trash2, Edit2, Plus, Clock, Target, Award, Star, Trophy, X } from 'lucide-react';
 
-// --- Helpers ---
+
 const calculateCalories = (p, c, f) => (p * 4) + (c * 4) + (f * 9);
 
 const getBMICategory = (bmi) => {
@@ -42,13 +42,13 @@ const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // BMI States
+
   const [bmiRecords, setBmiRecords] = useState([]);
   const [latestBMI, setLatestBMI] = useState(null);
   const [bmiForm, setBmiForm] = useState({ height: '', weight: '' });
   const [editingBmiId, setEditingBmiId] = useState(null); 
   
-  // Meal States
+  
   const [meals, setMeals] = useState([]);
   const [mealForm, setMealForm] = useState({ type: '', protein: '', carbs: '', fats: '' });
   const [editingMealId, setEditingMealId] = useState(null);
@@ -77,7 +77,7 @@ const Dashboard = () => {
     if (latestBMI) setExercises(getExerciseRecommendations(getBMICategory(latestBMI.bmi)));
   }, [latestBMI]);
 
-  // 🌟 NEW: Calculate Daily Calories (Only counts today's meals!)
+ 
   useEffect(() => {
     const today = new Date();
     
@@ -122,7 +122,7 @@ const Dashboard = () => {
     }
   };
 
-  // --- BMI Handlers ---
+  
   const handleBMISubmit = async (e) => {
     e.preventDefault();
     if (!bmiForm.height || !bmiForm.weight) return toast.error('Enter height and weight');
@@ -163,7 +163,7 @@ const Dashboard = () => {
     } catch (err) { toast.error('Failed to delete'); }
   };
 
-  // --- Meal Handlers ---
+  
   const handleMealSubmit = async (e) => {
     e.preventDefault();
     if (!mealForm.type) return toast.error('Enter meal name');
@@ -219,7 +219,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gray-50 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
-        {/* 🏆 Trophy Case Section */}
+        
         <section className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 overflow-hidden relative">
           <Trophy className="absolute -right-8 -top-8 text-orange-50/50 w-48 h-48 -rotate-12" />
           <div className="relative z-10">
@@ -254,7 +254,7 @@ const Dashboard = () => {
           </div>
         </section>
 
-        {/* 📊 Top Stats Row */}
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl p-6 text-white shadow-lg transform hover:scale-[1.02] transition-transform">
             <div className="flex justify-between items-start">
@@ -291,10 +291,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* 📝 Main Tracking Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
-          {/* LEFT: BMI Tracker */}
+         
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
             <div className="flex items-center gap-2 mb-6">
               <Scale className="text-orange-500" size={24}/>
@@ -349,7 +347,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* RIGHT: Nutrition Log */}
+          
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
             <div className="flex items-center gap-2 mb-6">
               <Flame className="text-orange-500" size={24}/>
@@ -414,7 +412,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* 💪 Training Plan Section */}
+       
         <div className="bg-gray-900 rounded-2xl p-8 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500 opacity-10 rounded-full blur-3xl -mr-20 -mt-20"></div>
           <div className="relative z-10 mb-8 flex items-center justify-between border-b border-gray-800 pb-4">
